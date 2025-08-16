@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+langchain
+langchain-google-vertexai
+langchain-google-genai
+requests
+python-dotenv
+inference-sdk
+python-multipart
+python-jose
