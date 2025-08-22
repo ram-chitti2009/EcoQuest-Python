@@ -48,6 +48,11 @@ def get_current_user(request: Request):
 
 router = APIRouter()
 
+@router.get("/test")
+async def test_endpoint():
+    print("[DEBUG] Test endpoint reached!")
+    return {"message": "Test endpoint working"}
+
 @router.post("/ask", response_model=GeminiResponse)
 async def ask_bot(request: QueryRequest, user_id: str = Depends(get_current_user)):
     print(f"[DEBUG] Request data: {request}")
@@ -67,24 +72,45 @@ async def ask_bot(request: QueryRequest, user_id: str = Depends(get_current_user
     return response
 
 @router.post("/classify-trash")
-async def classify_trash(file:UploadFile = File(...), 
+async def classify_trash(file: UploadFile = File(...), 
                          user_id: str = Depends(get_current_user)):
     """
     Endpoint to classify trash using an uploaded image.
     """
+    print(f"[DEBUG] classify_trash endpoint reached with user_id: {user_id}")
+    print(f"[DEBUG] File parameter received: {file}")
+    
     if not file:
+        print("[DEBUG] No file uploaded")
         raise HTTPException(status_code=400, detail="No file uploaded")
+    
+    print(f"[DEBUG] File received: {file.filename}, content_type: {file.content_type}")
     
     # Save the uploaded file temporarily
     temp_path = f"temp_{file.filename}"
+    print(f"[DEBUG] Saving file to: {temp_path}")
 
-    with open(temp_path, "wb") as f:
-        f.write(file.file.read())
-    
-    # Call the trash detection service
-    answer = classify_and_advise(temp_path, user_id)
-    
-    # Clean up the temporary file
-    os.remove(temp_path)
+    try:
+        with open(temp_path, "wb") as f:
+            content = file.file.read()
+            f.write(content)
+        print(f"[DEBUG] File saved successfully, size: {len(content)} bytes")
+        
+        # Call the trash detection service
+        print("[DEBUG] Calling classify_and_advise...")
+        answer = classify_and_advise(temp_path, user_id)
+        print(f"[DEBUG] classify_and_advise returned: {type(answer)}")
+        print(f"[DEBUG] Answer preview: {str(answer)[:200]}...")
 
-    return answer
+        # Clean up the temporary file
+        os.remove(temp_path)
+        print("[DEBUG] Temporary file cleaned up")
+
+        return answer
+        
+    except Exception as e:
+        print(f"[DEBUG] Error in classify_trash: {e}")
+        # Clean up file if it exists
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")

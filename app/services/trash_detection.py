@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 from inference_sdk import InferenceHTTPClient
 
@@ -44,11 +45,46 @@ def classify_and_advise(image_path, user_id):
 
     context = f"Trash segregation result: {detection_result}, Object identification result: {object_result}"
     query = (
-        "Based on the trash segregation and detection result above, "
-        "what is the object, what type of waste is this and how should it be disposed of in an environmentally friendly way?" \
-        "Elucidate on it, and tell the user how to dispose of it properly."
+        """Based on the trash segregation and detection result above, formulate a response in the format of like this. just include the json data in the response dont include anything else
+         const mockAnalysisData = {
+    litterType: "Plastic Bottle",
+    confidence: 94,
+    quantity: "1 item",
+    recyclable: true,
+    hazardLevel: "Low",
+    recommendations: [
+      "Remove the plastic bottle and place it in a recycling bin",
+      "Check for recycling symbol (usually #1 PET) on the bottom",
+      "Rinse the bottle if it contained sugary drinks before recycling",
+      "Consider reporting this location as a frequent littering spot",
+    ],
+    environmentalImpact: {
+      decompositionTime: "450 years",
+      carbonFootprint: "82g CO2 equivalent",
+      wildlifeRisk: "Medium - can harm marine life if reaches waterways",
+    },
+  }
+        """
+        
     )
 
     answer = sustainability_chatbot_response(user_id, query, [Document(page_content=context)])
+    
+    # Clean up the response - remove markdown formatting and "json" text
+    if isinstance(answer, str):
+        # Remove ```json and ``` markers
+        cleaned_answer = answer.replace('```json', '').replace('```', '').strip()
+        
+        # If it starts with "json", remove that too
+        if cleaned_answer.lower().startswith('json'):
+            cleaned_answer = cleaned_answer[4:].strip()
+        
+        # Try to parse and return as JSON object
+        try:
+            return json.loads(cleaned_answer)
+        except json.JSONDecodeError:
+            print(f"[DEBUG] Failed to parse JSON, returning cleaned string: {cleaned_answer[:100]}...")
+            return {"error": "Invalid JSON response", "raw_response": cleaned_answer}
+    
     return answer
 
