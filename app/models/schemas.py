@@ -9,4 +9,9 @@ class GeminiResponse(BaseModel):
     answer: str
 
 
-    
+class QuizBot(BaseModel):
+    user_id : str
+
+class QuizBotResponse(BaseModel):
+    questions: list[dict]
+

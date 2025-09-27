@@ -5,18 +5,38 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from app.models.schemas import QueryRequest, GeminiResponse
 from app.services.gcs_service import search_google
 from app.services.langchain_service import sustainability_chatbot_response
+from app.services.quiz_bot import quiz_bot_response
 from app.services.trash_detection import classify_and_advise
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 def get_current_user(request: Request):
     auth = request.headers.get("authorization")
-    print(f"[DEBUG] Auth header: {auth}")
+    print(f"[DEBUG] Auth header: {repr(auth)}")  # Use repr to see hidden characters
     
-    if not auth or not auth.startswith("Bearer "):
-        print("[DEBUG] Missing or invalid auth header format")
+    if not auth:
+        print("[DEBUG] Missing authorization header")
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    token = auth.split(" ")[1]
-    print(f"[DEBUG] Extracted token: {token[:50]}...")
+    # Clean and normalize the auth header
+    auth = auth.strip()
+    
+    if not auth.startswith("Bearer "):
+        print("[DEBUG] Invalid auth header format")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    # Strip whitespace and newline characters from the token
+    try:
+        token_parts = auth.split(" ", 1)  # Split only on first space
+        if len(token_parts) != 2:
+            print("[DEBUG] Invalid Bearer token format")
+            raise HTTPException(status_code=401, detail="Invalid token format")
+        
+        token = token_parts[1].strip()
+        # Remove any non-printable characters
+        token = ''.join(char for char in token if char.isprintable())
+        print(f"[DEBUG] Extracted token: {token[:50]}...")
+    except Exception as e:
+        print(f"[DEBUG] Error extracting token: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token format")
 
     if SUPABASE_JWT_SECRET is None:
         print("[DEBUG] JWT secret is None")
@@ -114,3 +134,22 @@ async def classify_trash(file: UploadFile = File(...),
         if os.path.exists(temp_path):
             os.remove(temp_path)
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+@router.post("/quiz-bot")
+async def quiz_bot(
+                         user_id: str = Depends(get_current_user)):
+    """
+    Endpoint to generate questions for the quiz
+    """
+    print(f"[DEBUG] quiz_bot endpoint reached with user_id: {user_id}")
+
+    try:
+        print("[DEBUG] Calling quiz bot")
+        answer = quiz_bot_response(user_id)
+        print(f"[DEBUG] quiz_bot_response returned: {type(answer)}")
+        print(f"[DEBUG] Answer preview: {str(answer)}")
+        return answer
+        
+    except Exception as e:
+        print(f"[DEBUG] Error in generating the quiz questions {e}")
+        raise HTTPException(status_code=500, detail=f"Error processing quiz questions: {str(e)}")
