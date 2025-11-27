@@ -2,6 +2,7 @@ fastapi
 uvicorn
 langchain
 langchain-core
+langchain-community
 langchain-google-vertexai
 langchain-google-genai
 requests
