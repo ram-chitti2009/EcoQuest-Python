@@ -41,7 +41,7 @@ def classify_and_advise(image_path, user_id):
     object_result = identify_object(image_path)
     if object_result is None:
         return "Error in object identification."
-    from langchain.schema import Document
+    from langchain_core.documents import Document
 
     context = f"Trash segregation result: {detection_result}, Object identification result: {object_result}"
     query = (

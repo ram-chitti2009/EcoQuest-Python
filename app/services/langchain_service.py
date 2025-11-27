@@ -1,9 +1,9 @@
 # LangChain logic
 from typing import List
 import langchain
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain.memory import ConversationBufferMemory
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 
